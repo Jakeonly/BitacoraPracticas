@@ -1,0 +1,50 @@
+﻿@using Visionamos.Coopcentral.DataAccess.Models.Ecgts
+@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Ecgts
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+
+<script>
+    function onEdit(e) {
+    }
+    function checkInputMail(e) {
+        if (/^[0-9A-Za-z ñ Ñ . @@]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    function checkInput(e) {
+        if (/^[0-9A-Za-z ñ Ñ]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+</script>
+
+@Html.LoadGridHelper()
+@(Html.NewGrid<gmf_commerce_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "SRC";
+        options.Controller   = "GmfCommerce";
+        options.TemplateName = "GmfCommerce/EditorTemplateGmfCommerce";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = "Configuracion comercio";
+        options.ViewDelete   = true;
+        options.ViewDetail   = false;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.SRC_TXT);
+        columns.Bound(p => p.CAT_TXT);
+        columns.Bound(p => p.ACT_TXT);
+    })
+)

@@ -1,0 +1,186 @@
+﻿@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Integracion
+@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.SitiosWeb.Resources
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones.ExtensionModels
+@Html.LoadGridHelper()
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    OptionGrid optionGrid = new OptionGrid();
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+    var permission = app_user.perfiles.perfiles_formularios.FirstOrDefault();
+
+    optionGrid.AppUser = app_user;
+    optionGrid.IdModel = "Code";
+    optionGrid.Controller = "OptionsMenu";
+    optionGrid.WidthPopUp = 400;
+    optionGrid.ViewDelete = false;
+    optionGrid.ViewDetail = false;
+    optionGrid.IdForm = idFormulario;
+
+}
+
+<script>
+    function RevisarResultadoAjax(res) {
+        LoadingStop()
+        if (res.type !== "read") {
+            if (res.response.hasOwnProperty("Errors"))
+                if (res.response.Errors == null)
+                    MensajeUnico(3000, 'success', '@WebUiResourceForms.SolicitudExitosa', '@WebUiResourceForms.TituloInformacion')
+                else
+                    MensajeUnico(3000, 'error', '@WebUiResourceForms.SolicitudNoExitosa', '@WebUiResourceForms.TituloInformacion')
+        }
+    }
+</script>
+<script id="template-checkbox" type="text/x-kendo-template">
+    #if(Exists !== null){#
+        <input id='#=Code# #=Name#'
+            #if(Exists == true) {# checked #}#
+            class='k-checkbox'
+            type='checkbox'
+            onchange='setView("#=Code#", "#=Exists#", this.checked)'
+            />
+            <label for='#=Code# #=Name#' class='k-checkbox-label'></label>
+    #}#
+</script>
+<script>
+    var myTemplate = kendo.template($('#template-checkbox').html());
+
+    function filtros() {
+        var entidad = $("#comboboxEntidad").data('kendoComboBox').value();
+        console.log(entidad);
+        return {
+            entity: entidad,
+        };
+    }
+
+    function onChange() {
+        var selected = $("#comboboxEntidad").data('kendoComboBox').value();
+        if (selected != "") {
+            filtros();
+            $("#grid").data("kendoGrid").dataSource.read();
+        }
+        else
+        {
+            $("#grid").data("kendoGrid").dataSource.read();
+        }
+
+    }
+</script>
+<script>
+    function setView(Code, ExistsBefore, checked) {
+        $.ajax({
+            url: '@Url.Action("CreateOrDelete", "OptionsMenu")',
+            type: 'POST',
+            dataType: 'json',
+            beforeSend: function () {
+                LoadingStart("Cargando...");
+            },
+            data: { Code, ExistsBefore, Exists: checked }
+        }).done(function () {
+            Mensaje(2000, "success", "Solicitud exitosa", "Confirmación");
+        }).fail(function (err) {
+            Mensaje(2000, "error", "Solicitud no realizada", "Confirmación");
+        }).always(function () {
+            LoadingStop();
+        });
+    }
+</script>
+
+<div class="container-fluid-title" style="overflow:auto;padding:1rem">
+@(Html.Kendo().ComboBoxFor(m => m)
+    .Name("comboboxEntidad")
+    .Filter("contains")
+    .DataTextField("NAME")
+    .DataValueField("CODE")
+    .Events(e => e.Change("onChange"))
+    .Placeholder("Busca una entidad...")
+    .ValuePrimitive(true)
+    .DataSource(source =>
+    {
+        source.Custom()
+                .ServerFiltering(true)
+                .Type("aspnetmvc-ajax")
+                .Transport(transport =>
+                {
+                    transport.Read("Read", "Commerce");
+                })
+                .Schema(schema =>
+                {
+                    schema.Data("Data")
+                        .Total("Total");
+                });
+    }).HtmlAttributes(new { @style = "width: 30%;" })
+)
+</div>
+    @(Html.Kendo().Grid<EntitiesStateGrid_UI>()
+    .Name("grid")
+    .AutoBind(true)
+    .ToolBar(tool =>
+    {
+        tool.Excel().Text("Exportar a Excel");
+        tool.Pdf().Text("Exportar a PDF");
+    })
+    .Excel(e => e.AllPages(true))
+        .Columns(columns =>
+        {
+        columns.Bound(p => p.Code).Hidden();
+        columns.Bound(p => p.Name).Width("50%").HtmlAttributes(new { style = "text-align:center;font-size:medium", @class = "text-center" });;
+        columns.Bound(p => p.Exists).ClientTemplate("#=myTemplate(data)#").Width("50%").HtmlAttributes(new { style = "text-align:center;font-size:medium", @class = "text-center" });
+    })
+        .Selectable()
+        .Pageable(p =>
+        {
+            p.Messages(m => m
+            .Display("Mostrando {0} de {2} Registros")
+            .Empty("No")
+            .First("Ir a la primera página")
+            .Last("Ir a la última página")
+            .Next("Ir a la siguiente página")
+            .Previous("Ir a la página anterior")
+            .ItemsPerPage("Ítems por página"));
+            p.Refresh(true);
+            p.PageSizes(new int[] { 50, 100, 200, 500, 1000 });
+            p.ButtonCount(4);
+        })
+        .Filterable(filterable =>
+        {
+            filterable.Messages(m => m
+            .Filter("Filtrar")
+            .Clear("Limpiar")
+            .Info("Mostrar artículo(s) que:"));
+            filterable.Extra(false);
+            filterable.Enabled(true);
+            filterable.Operators(operators => operators
+            .ForString(str => str.Clear()
+            .Contains("Contiene")
+            .StartsWith("Comienza con")
+            .IsEqualTo("Es igual a")
+            .IsNotEqualTo("Es diferente a")
+            .EndsWith("Termina en")
+            ));
+        })
+        .Sortable()
+        .Scrollable(a => a.Virtual(true))
+        .DataSource(dataSource => dataSource
+        .Ajax()
+        .PageSize(20)
+        .ServerOperation(false)
+        .Events(events =>
+        {
+            events.Error("errorHandlerEndGridExtension");
+            events.RequestStart("onRequestStartGridExtension");
+            events.RequestEnd("onRequestEndGridExtension");
+        })
+        .Read(read => read.Action("Read", optionGrid.Controller).Data("filtros"))
+        .Create(create => create.Action("Create", optionGrid.Controller))
+        .Update(update => update.Action("Update", optionGrid.Controller))
+        .Destroy(destroy => destroy.Action("Delete", optionGrid.Controller))
+        .Model(m => m.Id(optionGrid.IdModel))
+        )
+        .HtmlAttributes(new {
+            @style = "height: 88% !important;"
+        })
+        )

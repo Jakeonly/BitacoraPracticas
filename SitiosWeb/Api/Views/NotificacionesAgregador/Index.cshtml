@@ -1,0 +1,44 @@
+﻿@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Integracion
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+
+<script>
+    function onEdit(e) {
+        $("#IdComercioProveedorMaestroEmail").val("D9228E1D-F7F3-4275-B905-5126A6A7575D").change().hide();
+    }
+    function checkInput(e) {
+        if (/^[0-9A-Za-z ñ Ñ ]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+</script>
+
+@Html.LoadGridHelper()
+@(Html.NewGrid<comercios_proveedor_notificaciones_agregadorGrid_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "Id";
+        options.Controller   = "NotificacionesAgregador";
+        options.TemplateName = "NotificacionesAgregador/EditorTemplateNotificacionesAgregador";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = "Configuracion Agregador";
+        options.ViewDelete   = true;
+        options.ViewDetail   = false;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.Id).Hidden();
+        columns.Bound(p => p.Nombre);
+        columns.Bound(p => p.EmailNotificaciones);
+    })
+)

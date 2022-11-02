@@ -1,0 +1,48 @@
+﻿@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.LowAmountDeposit
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+
+<script>
+    function onEdit(e) {
+        var window_title = e.container.data("kendoWindow");
+        if (e.model.isNew()) {
+            window_title.title("Crear Configuración Proveedor");
+        } else {
+            window_title.title("Editar Configuración Proveedor");
+        }
+    }
+    function checkInput(e) {
+        if (/^[0-9A-Za-z ñ Ñ ]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+</script>
+
+@Html.LoadGridHelper()
+@(Html.NewGrid<TBL_TPROVIDER_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "PRV_GGID";
+        options.Controller   = "Provider";
+        options.TemplateName = "Provider/EditorTemplateProvider";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = "Configuración Proveedor";
+        options.ViewDelete   = true;
+        options.ViewDetail   = false;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.PRV_GGID).Hidden();
+        columns.Bound(p => p.PRV_NAME);
+    })
+)

@@ -1,0 +1,372 @@
+﻿@using Visionamos.SitiosWeb.Recursos
+@using Visionamos.SitiosWeb.Extensiones
+@using Visionamos.Operations.DataAccess.ViewModels.Products
+@using Visionamos.Operations.DataAccess.Models.Integracion
+@using Visionamos.SitiosWeb.Extensiones.ExtensionModels
+@model FeaturesRulesGrid_UI
+
+@{
+    Layout = null;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+    app_user app_user = Session["Usuario"] as app_user;
+    OptionGrid optionGrid = new OptionGrid();
+
+    optionGrid.AppUser = app_user;
+    optionGrid.IdModel = "Guid";
+    optionGrid.Controller = "FeaturesRules";
+    optionGrid.TemplateName = "FeaturesRules/EditorTemplatesFeaturesRules";
+    optionGrid.WidthPopUp = 400;
+    optionGrid.TiTlePopUp = WebUiResourceForms.TitleFeatureRules;
+    optionGrid.ViewDelete = true;
+    optionGrid.ViewDetail = true;
+    optionGrid.IdForm = idFormulario;
+    optionGrid.EventEdit = "onEdit";
+
+    var permissions = optionGrid.IdForm == null ? optionGrid.AppUser.perfiles.perfiles_formularios.FirstOrDefault() : optionGrid.AppUser.perfiles.perfiles_formularios.FirstOrDefault(x => x.id_formulario == optionGrid.IdForm);
+}
+
+<style>
+    .k-dialog .k-dialog-buttongroup.k-dialog-button-layout-stretched .k-button {
+        padding: 5px;
+    }
+
+    .number-hidden-arrows::-webkit-outer-spin-button,
+    .number-hidden-arrows::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .number-hidden-arrows[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    .table > tbody > tr > td, .table > tbody > tr > th, .table > tfoot > tr > td, .table > tfoot > tr > th, .table > thead > tr > td, .table > thead > tr > th {
+        padding: 8 px;
+        line-height: 1.42857143;
+        vertical-align: top;
+        border-top: none !important;
+    }
+
+    .password {
+        -webkit-text-security: disc;
+    }
+
+    .container-fluid-title {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .title {
+        margin: 1rem;
+    }
+
+    .comboBox {
+        width: 30%;
+    }
+</style>
+
+<script>
+    function onDetailOne(e) {
+        e.preventDefault();
+        detailsTemplate = kendo.template($("#detail").html());
+        var dataItem = this.dataItem($(e.currentTarget).closest("tr"));
+        var wnd = $("#windowFeature").data("kendoWindow");
+        wnd.content(detailsTemplate(dataItem));
+        wnd.center().open();
+    }
+
+    function errorHandlerEndGridExtension(e) {
+        if (e.errors) {
+            var message = "";
+            $.each(e.errors, function (key, value) {
+                if ('errors' in value) {
+                    $.each(value.errors, function () {
+                        message += this + "\n";
+                    });
+                }
+            });
+            MensajeError(message, 3000);
+            $("#grid").data("kendoGrid").cancelChanges();
+        }
+    }
+
+    function onRequestStartGridExtension(e) {
+        if (e.type == "create") {
+            LoadingStart('Un momento por favor.');
+        } else if (e.type == "destroy") {
+            LoadingStart('Un momento por favor.');
+        } else if (e.type == "update") {
+            LoadingStart('Un momento por favor.');
+        }
+        else {
+            LoadingStart('Cargando Información.');
+        }
+    }
+
+    function onRequestEndGridExtension(e) {
+        LoadingStop();
+        if (e.type == "update" && !e.response.Errors) {
+            $("#grid").data("kendoGrid").dataSource.read();
+            MensajeSuccess("Solicitud realizada con éxito");
+        }
+
+        if (e.type == "create" && !e.response.Errors) {
+            $("#grid").data("kendoGrid").dataSource.read();
+            MensajeSuccess("Solicitud realizada con éxito");
+        }
+
+        if (e.type == "destroy" && !e.response.Errors) {
+            MensajeSuccess("Solicitud realizada con éxito");
+        }
+    }
+
+    function onDeleteEndGridExtension(e) {
+        evt = e;
+        var dialog = $("<div></div>");
+
+        dialog.kendoDialog({
+            width: "350px",
+            title: "Confirmación",
+            closable: true,
+            modal: true,
+            content: "<p>¿Está seguro(a), de querer eliminar el registro?<p>",
+            actions: [
+                { text: 'Cancelar' },
+                { text: 'Aceptar', primary: true, action: DeleteGridExtension }
+            ]
+        });
+        dialog.data("kendoDialog").open();
+    }
+
+    function DeleteGridExtension() {
+        var grid = $("#grid").data("kendoGrid");
+        grid.removeRow($(evt.target).closest("tr"));
+    }
+</script>
+
+<script>
+    $("#btnAdd").hide();
+
+    function onEdit(e) {
+
+        $("#EntityCode").hide();
+        var combo2 = $("#ProductSubType").data("kendoComboBox");
+        combo2.enable(false);
+
+        if (e.model.isNew()) {
+            var entity = $("#Entidades").data('kendoComboBox').value();
+            $("#EntityCode").val(entity).change();
+        }
+
+        if (!e.model.isNew()) {
+            var combo1 = $("#ProductType").data("kendoComboBox");
+            combo1.enable(false);
+        }
+    }
+
+    function onChange() {
+        var combo = $("#ProductSubType").data('kendoComboBox');
+        var selected = $("#ProductType").data('kendoComboBox').value();
+
+        if (selected != "") {
+            combo.dataSource.filter({ field: "AST_COPEN_BANKING_NAME", operator: "contains", value: (selected) });
+            var combo2 = $("#ProductSubType").data("kendoComboBox");
+            combo.select(-1);
+            combo2.enable(true);
+        } else if (selected == "") {
+            combo.select(-1);
+            var combo2 = $("#ProductSubType").data("kendoComboBox");
+            combo2.enable(false);
+            combo.dataSource.data([]);
+        }
+
+    }
+
+    function onFilter() {
+        var value = this.value(), grid = $("#grid").data("kendoGrid");
+        if (value != "") {
+            $("#btnAdd").show();
+        } else if (value == "") {
+            $("#btnAdd").hide();
+            $("#grid").data("kendoGrid").dataSource.data([]);
+        }
+        if (value) {
+            grid.dataSource.filter({ field: "EntityCode", operator: "eq", value: (value) });
+        }
+    }
+</script>
+
+<div class="container-fluid-title" style="overflow:auto;padding:1rem;">
+    <div class="title" style="margin-top:7px;">
+        @Html.Label("Entidad")
+    </div>
+    <div class="comboBox">
+        @(Html.Kendo().ComboBoxFor(m => m)
+            .Name("Entidades")
+            .Filter("contains")
+            .DataTextField("NAME")
+            .DataValueField("CODE")
+            .Events(e =>e.Change("onFilter"))
+            .Placeholder(WebUiResourceForms.SelectEntity)
+            .ValuePrimitive(true)
+            .DataSource(source =>
+            {
+                source.Custom()
+                        .ServerFiltering(true)
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport =>
+                        {
+                            transport.Read("Read", "Commerce");
+                        })
+                        .Schema(schema =>
+                        {
+                            schema.Data("Data")
+                                .Total("Total");
+                        });
+            }).HtmlAttributes(new { @style = "width: 100%;" })
+        )
+    </div>
+</div>
+
+@(Html.Kendo().Grid<FeaturesRulesGrid_UI>()
+    .Name("grid")
+    .AutoBind(false)
+    .ToolBar(tool =>
+    {
+        if (permissions.accion_new == true)
+        {
+            tool.Create().Text(WebUiResourceForms.Add).HtmlAttributes(new { @id = "btnAdd" });
+        }
+        tool.Excel().Text(WebUiResourceForms.Excel);
+        tool.Pdf().Text(WebUiResourceForms.PDF);
+    })
+    .Excel(e => e.AllPages(true))
+    .Columns(col =>
+    {
+        col.Command(cmd =>
+        {
+            if (permissions.accion_consultar == true && optionGrid.ViewDetail)
+            {
+                cmd.Custom("Detalle")
+                .Text("<span class='k-icon k-i-eye'></span>")
+                .Click("onDetailOne")
+                .HtmlAttributes(new { rel = "tooltip", title = "Ver detalle", data_toggle = "tooltip", data_placement = "right", @style = "align-tex:center;" });
+            }
+
+            if (permissions.accion_update == true)
+            {
+                cmd.Edit()
+                .CancelText(WebUiResourceForms.Cancel)
+                .UpdateText(WebUiResourceForms.Acept)
+                .Text(" ")
+                .HtmlAttributes(new { rel = "tooltip", dataToggle = "tooltip", title = "Editar" });
+            }
+
+            if (permissions.accion_delete == true && optionGrid.ViewDelete)
+            {
+                cmd.Custom("Eliminar")
+                .Click("onDeleteEndGridExtension")
+                .Text("<span class='k-icon k-i-delete'></span>")
+                .HtmlAttributes(new { title = "Eliminar" });
+            }
+        }).Title("Acciones").Width(optionGrid.ViewDetail ? 220 : 160).HtmlAttributes(new { @style = "text-align:center;" });
+    })
+    .Columns(columns =>
+    {
+        columns.Bound(p => p.Guid).Hidden();
+        columns.Bound(p => p.EntityName);
+        columns.Bound(p => p.ProductTypeTxt);
+        columns.Bound(p => p.ProductSubTypeTxt);
+    })
+    .Selectable()
+    .Pageable(p =>
+    {
+        p.Messages(m => m
+        .Display("Mostrando {0} de {2} Registros")
+        .Empty("No")
+        .First("Ir a la primera página")
+        .Last("Ir a la última página")
+        .Next("Ir a la siguiente página")
+        .Previous("Ir a la página anterior")
+        .ItemsPerPage("Ítems por página"));
+        p.Refresh(true);
+        p.PageSizes(new int[] { 50, 100, 200, 500, 1000 });
+        p.ButtonCount(4);
+    })
+    .Filterable(filterable =>
+    {
+        filterable.Messages(m => m
+        .Filter("Filtrar")
+        .Clear("Limpiar")
+        .Info("Mostrar artículo(s) que:"));
+        filterable.Extra(false);
+        filterable.Enabled(true);
+        filterable.Operators(operators => operators
+        .ForString(str => str.Clear()
+        .Contains("Contiene")
+        .StartsWith("Comienza con")
+        .IsEqualTo("Es igual a")
+        .IsNotEqualTo("Es diferente a")
+        .EndsWith("Termina en")
+        ));
+    })
+    .Sortable()
+    .Scrollable(a => a.Virtual(true))
+    .Events(events =>
+    {
+        if (!string.IsNullOrEmpty(optionGrid.EventEdit))
+            events.Edit(optionGrid.EventEdit);
+    })
+    .DataSource(dataSource => dataSource
+    .Ajax()
+    .PageSize(20)
+    .ServerOperation(false)
+    .Events(events =>
+    {
+        events.Error("errorHandlerEndGridExtension");
+        events.RequestStart("onRequestStartGridExtension");
+        events.RequestEnd("onRequestEndGridExtension");
+    })
+    .Read(read => read.Action("Read", optionGrid.Controller))
+    .Create(create => create.Action("Create", optionGrid.Controller))
+    .Update(update => update.Action("Update", optionGrid.Controller))
+    .Destroy(destroy => destroy.Action("Delete", optionGrid.Controller))
+    .Model(m => m.Id(optionGrid.IdModel))
+    )
+    .Editable(e => e.Mode(GridEditMode.PopUp).TemplateName(optionGrid.TemplateName).AdditionalViewData(null)
+    .Window(w => w.Width(optionGrid.WidthPopUp).Title("Crear/Editar Reglas de Caracteristicas"))
+    .DisplayDeleteConfirmation(false))
+    .HtmlAttributes(new {
+        @style = "height: 92% !important;"
+    })
+    )
+<style>
+</style>
+@(Html.Kendo().Window()
+    .Name("windowFeature")
+    .Title("Detalle Reglas de Característica")
+    .Width(400)
+    .Visible(false)
+    .Modal(true)
+    .Draggable(true)
+    .Content(@<text>
+        <script type="text/x-kendo-template" id="detail">
+           <table class="table" style="width: 100%;margin:auto;">
+            <tbody style="padding:1rem">
+                <tr><td><label>Entidad:              </label></td><td> #=EntityName#         </td></tr>
+                <tr><td><label>Tipo de producto:     </label></td><td>#=ProductTypeTxt#      </td></tr>
+                <tr><td><label>Subtitpo de producto: </label></td><td> #=ProductSubTypeTxt#  </td></tr>
+                <tr><td><label>QR:                   </label></td><td><input type="checkbox" #=AllowsQr ? "checked" : ""# disabled/>              </td></tr>
+                <tr><td><label>CP:                   </label></td><td><input type="checkbox" #=AllowsCp ? "checked" : ""# disabled/>              </td></tr>
+                <tr><td><label>Movimiento:           </label></td><td><input type="checkbox" #=AllowsMovements ? "checked" : ""# disabled/>       </td></tr>
+                <tr><td><label>Detalles:             </label></td><td><input type="checkbox" #=AllowsDetails ? "checked" : ""# disabled/>         </td></tr>
+                <tr><td><label>Saldo:                </label></td><td><input type="checkbox" #=AllowViewBalance ? "checked" : ""# disabled/>      </td></tr>
+                <tr><td><label>Fecha de vencimiento: </label></td><td><input type="checkbox" #=AllowViewDueDate ? "checked" : ""# disabled/>      </td></tr>
+                <tr><td><label>Saldo total:          </label></td><td><input type="checkbox" #=AllowViewLedBalance ? "checked" : ""# disabled/>   </td></tr>
+                <tr><td><label>Pago mínimo:          </label></td><td><input type="checkbox" #=AllowViewMinimumPay ? "checked" : ""# disabled/>   </td></tr>
+                <tr><td><label>Pago total:           </label></td><td><input type="checkbox" #=AllowViewTotalPayment ? "checked" : ""# disabled/> </td></tr>
+            </tbody>
+           </table>
+        </script>
+    </text>)
+)

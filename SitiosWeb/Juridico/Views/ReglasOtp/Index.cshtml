@@ -1,0 +1,408 @@
+﻿@using Visionamos.SitiosWeb.Recursos
+@using Visionamos.SitiosWeb.Extensiones
+@using Visionamos.Operations.DataAccess.ViewModels.EnterpriseSecurity
+@using Visionamos.Operations.DataAccess.Models.Integracion
+@using Visionamos.SitiosWeb.Extensiones.ExtensionModels
+@model ReglasOtpGrid_UI
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    var permmisions = app_user.perfiles.perfiles_formularios.FirstOrDefault();
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+
+<script>
+    function errorHandlerEndGridExtension(e) {
+        if (e.errors) {
+            var message = "";
+            $.each(e.errors, function (key, value) {
+                if ('errors' in value) {
+                    $.each(value.errors, function () {
+                        message += this + "\n";
+                    });
+                }
+            });
+            MensajeInformativo(message);
+            $("#grid").data("kendoGrid").cancelChanges();
+        }
+    }
+
+    function onRequestStartGridExtension(e) {
+        if (e.type == "create") {
+            LoadingStart('Un momento por favor.');
+        } else if (e.type == "destroy") {
+            LoadingStart('Un momento por favor.');
+        } else if (e.type == "update") {
+            LoadingStart('Un momento por favor.');
+        }
+        else {
+            LoadingStart('Cargando Información.');
+        }
+    }
+
+    function onRequestEndGridExtension(e) {
+        LoadingStop();
+        if (e.type == "update" && !e.response.Errors) {
+            $("#grid").data("kendoGrid").dataSource.read();
+            MensajeSuccess("Solicitud realizada con éxito");
+        }
+
+        if (e.type == "create" && !e.response.Errors) {
+            $("#grid").data("kendoGrid").dataSource.read();
+            MensajeSuccess("Solicitud realizada con éxito");
+        }
+
+        if (e.type == "destroy" && !e.response.Errors) {
+            MensajeSuccess("Solicitud realizada con éxito");
+        }
+    }
+
+    function onDeleteEndGridExtension(e) {
+        evt = e;
+        var dialog = $("<div></div>");
+
+        dialog.kendoDialog({
+            width: "350px",
+            title: "Confirmación",
+            closable: true,
+            modal: true,
+            content: "<p>¿Está seguro(a), de querer eliminar el registro?<p>",
+            actions: [
+                { text: 'Cancelar' },
+                { text: 'Aceptar', primary: true, action: DeleteGridExtension }
+            ]
+        });
+        dialog.data("kendoDialog").open();
+    }
+
+    function DeleteGridExtension() {
+        var grid = $("#grid").data("kendoGrid");
+        grid.removeRow($(evt.target).closest("tr"));
+    }
+
+    function checkInput(e) {
+        if (/^[0-9A-Za-zÁ-Ýá-ý ñÑ]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function number(e) {
+        if (/^[1-9]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function onEdit(e) {
+        if (e.model.isNew()) {
+            $("#TemplateMail").val("NCUS").change().hide();
+        }
+
+        document.getElementById("Length").addEventListener("input", numberOTP, false);
+
+        function numberOTP() {
+            if (this.value != 4 && this.value != 6) {
+                this.value = "";                
+                MensajeInformativo("Solo se permiten los números 4 o 6 en el campo longitud", "¡Atención!");
+            }
+        }
+
+        var entidad = $("#combobox").val();
+        $("#EntityCode").val(entidad).change().hide();
+
+        if (!e.model.isNew()) {
+            var code = $("#Code").data("kendoComboBox");
+            code.enable(false);
+
+            var checkUsuario = document.getElementById('usuario');
+            var checkSms = document.getElementById('sms');
+            var checkMail = document.getElementById('mail');
+
+            $("#TemplateMail").hide();
+
+            if (checkUsuario.checked) {
+                checkSms.checked = false;
+                checkMail.checked = false;
+                checkSms.disabled = true;
+                checkMail.disabled = true;
+
+            } else {
+                checkSms.disabled = false;
+                checkMail.disabled = false;
+            }
+        }
+
+        var checkUsuario = document.getElementById('usuario');
+        var checkSms = document.getElementById('sms');
+        var checkMail = document.getElementById('mail');
+
+        checkUsuario.addEventListener('click', function () {
+            if (checkUsuario.checked) {
+                checkSms.checked = false;
+                checkMail.checked = false;
+                checkSms.disabled = true;
+                checkMail.disabled = true;
+
+            } else {
+                checkSms.disabled = false;
+                checkMail.disabled = false;
+            }
+        });
+
+    }
+
+    function onSelect(e) {
+        var dataItem = this.dataItem(e.item.index());
+        codigo = dataItem.Value;
+        if (codigo == "ADM") {
+            $("#Description").val("OTP Administrativo").change();
+        }
+        if (codigo == "TRN") {
+            $("#Description").val("OTP Transaccional").change();
+        }
+    }
+
+    function GetFilters() {
+        var entities = $("#combobox").val();
+        return {
+            entity: entities
+        }
+    }
+
+    function filter() {
+        UpdateList();
+        $(document).ready(function () {
+            var entidad = $("#combobox").val();
+
+            if (entidad != null) {
+                $("#Create").show();
+            }
+            if (entidad == null || entidad == "") {
+                $("#Create").hide();
+            }
+        });
+    }
+
+    function UpdateList() {
+        $("#grid").data("kendoGrid").dataSource.read();
+    }
+
+    $(document).ready(function () {
+        if ($("#combobox").val() == 0) {
+            $("#Create").hide();
+        }
+    });
+
+    function onDetailRuleOtp(e) {
+        e.preventDefault();
+        detailsTemplate = kendo.template($("#template-detail-rules-otp").html());
+        var dataItem = this.dataItem($(e.currentTarget).closest("tr"));
+        var wnd = $("#windowRuleOTP").data("kendoWindow");
+        wnd.content(detailsTemplate(dataItem));
+        wnd.center().open();
+    }
+</script>
+
+<style>
+    .table > tbody > tr > td {
+        border-top: 0px;
+    }
+
+    .container-fluid-title {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .title {
+        margin: 1rem;
+    }
+
+    .comboBox {
+        width: 20%;
+    }
+
+    .k-edit-form-container .k-edit-buttons {
+        width: 97.9%;
+    }
+</style>
+
+<div class="container-fluid-title" style="overflow:auto;padding:1rem">
+    <div class="title" style="margin-top:7px;">
+        @Html.LabelFor(l => l.EntityCode)
+    </div>
+    <div class="comboBox">
+        @(Html.Kendo().ComboBoxFor(m => m)
+        .Name("combobox")
+        .Filter("contains")
+        .DataTextField("NAME")
+        .DataValueField("CODE")
+        .Events(e => e.Change("filter"))
+        .Placeholder(WebUiResourceForms.SelectEntity)
+        .ValuePrimitive(true)
+        .DataSource(source =>
+        {
+            source.Custom()
+                    .ServerFiltering(true)
+                    .Type("aspnetmvc-ajax")
+                    .Transport(transport =>
+                    {
+                        transport.Read("Read", "Commerce");
+                    })
+                    .Schema(schema =>
+                    {
+                        schema.Data("Data")
+                            .Total("Total");
+                    });
+        }).HtmlAttributes(new { @style = "width: 100%;" })
+    )
+    </div>
+</div>
+
+@(Html.Kendo().Grid<ReglasOtpGrid_UI>()
+    .Name("grid")
+    .Events(e =>
+    {
+        e.Edit("onEdit");
+    })
+    .ToolBar(toolbar =>
+    {
+        if (permmisions.accion_new == true)
+        {
+            toolbar.Create().Text(WebUiResourceForms.Add).HtmlAttributes( new { id="Create"});
+        }
+        toolbar.Excel().Text(WebUiResourceForms.Excel);
+        toolbar.Pdf().Text(WebUiResourceForms.PDF);
+    })
+    .Columns(column =>
+    {
+        column.Command(command =>
+        {
+            if (permmisions.accion_consultar == true)
+            {
+                command.Custom("Detalle")
+                .Text("<span class = 'k-icon k-i-eye'></span>")
+                .Click("onDetailRuleOtp")
+                .HtmlAttributes(new { rel = "tooltip", title = "Ver detalle", data_toogle = "tooltip", data_placement = "rigth", @style = "align-text:center;" });
+            }
+
+            if (permmisions.accion_update == true)
+            {
+                command.Edit()
+                    .CancelText("Cancelar")
+                    .UpdateText(WebUiResourceForms.Acept)
+                    .Text(" ")
+                    .HtmlAttributes(new { rel = "tooltip", dataToggle = "tooltip", title = "Editar" });
+            }
+
+            if (permmisions.accion_delete == true)
+            {
+                command.Custom("Eliminar")
+                    .Click("onDeleteEndGridExtension")
+                    .Text("<span class='k-icon k-i-delete'></span>")
+                    .HtmlAttributes(new { title = "Eliminar" });
+            }
+
+        }).Title(WebUiResourceForms.Actions).HtmlAttributes(new { @style = "text-align:center;" });
+    })
+    .Columns(column =>
+    {
+        column.Bound(p => p.Guid).Hidden();
+        column.Bound(p => p.EntityName);
+        column.Bound(p => p.Code);
+        column.Bound(p => p.Description);
+        column.Bound(p => p.TimeLife);
+        column.Bound(p => p.Length);
+        column.Bound(p => p.TemplateMail).Hidden();
+        column.Bound(p => p.Attempts);
+        column.Bound(p => p.SelectUserTxt);
+        column.Bound(p => p.NotificationSmsTxt);
+        column.Bound(p => p.NotificationMailTxt);
+        column.Bound(p => p.DynamicKeyboardTxt);
+    })
+    .Selectable()
+    .Pageable(p =>
+    {
+        p.Messages(m => m
+        .Display(WebUiResourceForms.Display)
+        .Empty(WebUiResourceForms.Empty)
+        .First(WebUiResourceForms.First)
+        .Last(WebUiResourceForms.Last)
+        .Next(WebUiResourceForms.Next)
+        .Previous(WebUiResourceForms.Previous)
+        .ItemsPerPage(WebUiResourceForms.ItemsPerPage));
+        p.Refresh(true);
+        p.PageSizes(new int[] { 50, 100, 200, 500, 1000 });
+        p.ButtonCount(4);
+    })
+    .Filterable(filterable =>
+    {
+        filterable.Messages(m => m
+            .Filter(WebUiResourceForms.Filter)
+            .Clear(WebUiResourceForms.Clear)
+            .Info(WebUiResourceForms.Info));
+        filterable.Extra(false);
+        filterable.Enabled(true);
+        filterable.Operators(operators =>
+            operators.ForString(str =>
+                str.Clear()
+                    .Contains(WebUiResourceForms.Contains)
+                    .StartsWith(WebUiResourceForms.StartsWith)
+                    .IsEqualTo(WebUiResourceForms.IsEqualTo)
+                    .IsNotEqualTo(WebUiResourceForms.IsNotEqualTo)
+                    .EndsWith(WebUiResourceForms.EndsWith)
+        ));
+    })
+    .Sortable()
+    .Scrollable(s => s.Virtual(true))
+    .AutoBind(false)
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .PageSize(20)
+        .ServerOperation(false)
+        .Events(events =>
+        {
+            events.Error("errorHandlerEndGridExtension");
+            events.RequestStart("onRequestStartGridExtension");
+            events.RequestEnd("onRequestEndGridExtension");
+        })
+        .Read(read => read.Action("Read", "ReglasOtp").Data("GetFilters"))
+        .Create(create => create.Action("Create", "ReglasOtp").Data("GetFilters"))
+        .Update(update => update.Action("Update", "ReglasOtp"))
+        .Destroy(delete => delete.Action("Delete", "ReglasOtp"))
+        .Model(m =>
+        {
+            m.Id(f => f.Guid);
+        })
+    )
+    .Editable(e => e.Mode(GridEditMode.PopUp).TemplateName("ReglasOtp/EditorTemplateReglasOtp").AdditionalViewData(null)
+    .Window(w => w.Width(408).Title(WebUiResourceForms.CreateEdit + " " + WebUiResourceForms.TitleRulesOtp)).DisplayDeleteConfirmation(false))
+    .HtmlAttributes(new { @style = "height: 92% !important;" })
+)
+@(Html.Kendo().Window()
+    .Name("windowRuleOTP")
+    .Modal(true)
+    .Width(400)
+    .Title("Detalle " + WebUiResourceForms.TitleRulesOtp)
+    .Visible(false)
+    .Content(@<text>
+        <script id="template-detail-rules-otp" type="text/x-kendo-template">
+            <div id="template-detail-rules-otp">
+                <table class="table" style="width:100%;margin:0;">
+                    <tr><td><label>Entidad:           </label></td><td>#=EntityName#          </td></tr>
+                    <tr><td><label>Código:            </label></td><td>#=Code#                </td></tr>
+                    <tr><td><label>Descripción:       </label></td><td>#=Description#         </td></tr>
+                    <tr><td><label>Tiempo Vida:       </label></td><td>#=TimeLife#            </td></tr>
+                    <tr><td><label>Longuitud:         </label></td><td>#=Length#              </td></tr>
+                    <tr><td><label>Intentos:          </label></td><td>#=Attempts#            </td></tr>
+                    <tr><td><label>Selección Usuario: </label></td><td>#=SelectUserTxt#       </td></tr>
+                    <tr><td><label>Notificación Sms:  </label></td><td>#=NotificationSmsTxt#  </td></tr>
+                    <tr><td><label>Notificación Mail: </label></td><td>#=NotificationMailTxt# </td></tr>
+                    <tr><td><label>Teclado Dinámico:  </label></td><td>#=DynamicKeyboardTxt#  </td></tr>
+                </table>
+            </div>
+        </script>
+    </text>)
+)

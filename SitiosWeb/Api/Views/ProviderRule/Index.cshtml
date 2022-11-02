@@ -1,0 +1,72 @@
+﻿@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.LowAmountDeposit
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+<style>
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+<script>
+    function onEdit(e) {
+        var window_title = e.container.data("kendoWindow");
+        if (e.model.isNew()) {
+            window_title.title("Crear Configuración Reglas de Proveedor");
+        } else {
+            window_title.title("Editar Configuración Reglas de Proveedor");
+        }
+    }
+
+    function checkNumber(e) {
+        if (/^[0-9]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function checkInput(object) {
+        if (object.value.length > object.maxLength) {
+            object.value = object.value.slice(0, object.maxLength)
+        }
+        if (object.value > 120) {
+            object.value = 120;
+        }
+    }
+
+    //myInput.oninput = function () {
+    //    if (this.value.length > 4) {
+    //        this.value = this.value.slice(0, 4);
+    //    }
+    //}
+</script>
+
+@Html.LoadGridHelper()
+@(Html.NewGrid<TBL_TRULES_PROVIDER_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "RLS_GGID";
+        options.Controller   = "ProviderRule";
+        options.TemplateName = "ProviderRule/EditorTemplateProviderRule";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = "Configuración Reglas de Proveedor";
+        options.ViewDelete   = true;
+        options.ViewDetail   = false;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.RLS_GGID).Hidden();
+        columns.Bound(p => p.RLS_CENTITY_TXT);
+        columns.Bound(p => p.PRV_GGID_TXT);
+        columns.Bound(p => p.RLS_NWAIT_TIME);
+    })
+)

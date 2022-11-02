@@ -1,0 +1,195 @@
+﻿@using Visionamos.Coopcentral.DataAccess.ViewModels.TransversalUI
+@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Integracion
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones.ExtensionModels
+@using Visionamos.Coopcentral.DataAccess.Models.Ecgts
+@Html.LoadGridHelper()
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+    var permission = app_user.perfiles.perfiles_formularios.FirstOrDefault();
+
+    OptionGrid optionGrid = new OptionGrid();
+
+    optionGrid.AppUser = app_user;
+    optionGrid.TemplateName = "NotificacionesComercio/EditorTemplatNotificacionesComercio";
+    optionGrid.WidthPopUp = 400;
+    optionGrid.IdForm = idFormulario;
+    optionGrid.EventEdit = "onEdit"; 
+    optionGrid.IdForm = idFormulario;
+
+}
+<style>
+    .empty-grid::before {
+        padding: 1em;
+        line-height: 3em;
+        content: "No se encuentra información registrada.";
+    }
+</style>
+
+<script>
+    function checkInputMail(e) {
+        if (/^[0-9A-Za-z ñ Ñ . @@]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    function checkInput(e) {
+        if (/^[0-9A-Za-z ñ Ñ]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    function onEdit(e) {
+        $("#IdComercioProveedorMaestroEmail").val("9637F122-ADB7-4735-AF0D-0D56C3028CE8").change().hide();
+    }
+</script>
+
+@(Html.Kendo().Grid<comercios_proveedor_UI>()
+    .Name("grid")
+    .Columns(columns =>
+    {
+        //if (permission.accion_update == true || permission.accion_delete == true)
+        //{
+        //    columns.Command(command =>
+        //    {
+        //        if (permission.accion_update == true)
+        //        {
+        //            //command.Edit().Text(" ");
+        //        }
+        //        if (permission.accion_delete == true)
+        //        {
+        //            command.Custom("Eliminar")
+        //            .Click("onDeleteEndGridExtension")
+        //            .Text("<span rel='tooltip' data-toggle='tooltip' title='Eliminar'><span class='k-icon k-i-delete'></span></span>")
+        //            .HtmlAttributes(new { title = "Eliminar" });
+        //        }
+        //    }).Width(100);
+        //}
+        columns.Bound(p => p.IdComercioProveedor).Hidden();
+        columns.Bound(p => p.NombreComercio).Title("Comercio");
+    })
+    .Filterable()
+    .Pageable(p =>
+    {
+        p.Refresh(true);
+        p.PageSizes(new int[] { 50, 100, 200, 500, 1000 });
+        p.ButtonCount(4);
+    })
+    .ToolBar(toolbar =>
+    {
+        //toolbar.Create().Text("Añadir");
+        toolbar.Excel().Text("Exportar a excel");
+        toolbar.Pdf().Text("Exportar a pdf");
+
+    })
+    .Excel(excel => excel
+    .AllPages(true)
+    .FileName("Comercio.xlsx")
+    .Filterable(true)
+    )
+    .Pdf(pdf => pdf
+    .AllPages()
+    .FileName("Comercio.pdf")
+    )
+    //.Editable(e => e.Mode(GridEditMode.PopUp).TemplateName("Nashe").AdditionalViewData(null)
+    //    .Window(w => w.Width(optionGrid.WidthPopUp).Title("Crear/Editar Comercio"))
+    //    .DisplayDeleteConfirmation(false))
+    .Pageable()
+    .Sortable()
+    .Scrollable()
+    .Resizable(resize => resize.Columns(true))
+    .NoRecords("No se encuentra información registrada")
+    .ClientDetailTemplateId("template")
+    .DataSource(dataSource => dataSource
+    .Ajax()
+    .Batch(false)
+    .ServerOperation(false)
+    .PageSize(50)
+    .Events(events =>
+    {
+        events.Error("errorHandlerEndGridExtension");
+        events.RequestStart("onRequestStartGridExtension");
+        events.RequestEnd("onRequestEndGridExtension");
+    })
+    .PageSize(50)
+    .Model(model =>
+    {
+        model.Id(p => p.IdComercioProveedor);
+    })
+    //.Create(update => update.Action("Create", "NotificacionesRecaudador"))
+    .Read(read => read.Action("Read", "NotificacionesProveedor"))
+    //.Update(update => update.Action("Update", "NotificacionesRecaudador"))
+    //.Destroy(update => update.Action("Destroy", "NotificacionesRecaudador"))
+    )
+    .HtmlAttributes(new
+    {
+        @style = "height: 100% !important;"
+    })
+    )
+<script id="template" type="text/kendo-tmpl">
+@(Html.Kendo().Grid<comercios_proveedor_notificaciones_comercioGrid_UI>()
+    .Name("grid_" + Convert.ToString("#=IdComercioProveedor#"))
+    //.Events(events => events.Save("jsonRecaudador.DetailSave"))
+    .Columns(columns =>
+    {
+        if (permission.accion_update == true || permission.accion_delete == true)
+        {
+            columns.Command(command =>
+            {
+                if (permission.accion_update == true)
+                {
+                    command.Edit().Text(" ");
+                }
+                if (permission.accion_delete == true)
+                {
+                    command.Destroy().Text(" ");
+                }
+            }).Width(100).HtmlAttributes(new
+            {
+                @style = "text-align:center"
+            })
+            ;
+        }
+        columns.Bound(o => o.Nombre).Title("Nombre").Width(300);
+        columns.Bound(o => o.EmailNotificaciones).Title("Correo").Width(300);
+    })
+    .Events(events =>
+    {
+        if (!string.IsNullOrEmpty(optionGrid.EventEdit))
+            events.Edit(optionGrid.EventEdit);
+    })
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Events(events =>
+        {
+            events.Error("errorHandlerEndGridExtension");
+            events.RequestStart("onRequestStartGridExtension");
+            events.RequestEnd("onRequestEndGridExtension");
+        })
+            .Model(model =>
+            {
+                model.Id(p => p.Id);
+            })
+            .Create(create => create.Action("Create", "NotificacionesComercio", new { CodigoComercio = Convert.ToString("#=IdComercioProveedor#") }))
+            .Read(read => read.Action("Read", "NotificacionesComercio", new { CodigoComercio = Convert.ToString("#=IdComercioProveedor#") }))
+            .Update(update => update.Action("Update", "NotificacionesComercio", new { CodigoComercio = Convert.ToString("#=IdComercioProveedor#") }))
+            .Destroy(destroy => destroy.Action("Delete", "NotificacionesComercio", new { CodigoComercio = Convert.ToString("#=IdComercioProveedor#") }))
+            )
+            .Editable(e => e.Mode(GridEditMode.PopUp).TemplateName(optionGrid.TemplateName).AdditionalViewData(null)
+            .Window(w => w.Width(optionGrid.WidthPopUp).Title("Crear/Editar Comercio"))
+            .DisplayDeleteConfirmation(false))
+            .ToolBar(toolbar =>
+            {
+                toolbar.Create().Text("Añadir");
+            })
+        .Resizable(resize => resize.Columns(true))
+        .Scrollable()
+        .NoRecords(x => x.Template("<div class='empty-grid'></div>"))
+        .ToClientTemplate()
+
+        )
+</script>
+

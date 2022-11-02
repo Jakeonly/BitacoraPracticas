@@ -1,0 +1,229 @@
+﻿@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Integracion
+@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.SitiosWeb.Resources
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones.ExtensionModels
+@Html.LoadGridHelper()
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    OptionGrid optionGrid = new OptionGrid();
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+    var permission = app_user.perfiles.perfiles_formularios.FirstOrDefault();
+
+    optionGrid.AppUser = app_user;
+    optionGrid.IdModel = "Id";
+    optionGrid.Controller = "NotificacionesEmail";
+    optionGrid.TemplateName = "NotificacionesEmail/EditorTemplateNotificacionesEmail";
+    optionGrid.WidthPopUp = 400;
+    optionGrid.EventEdit = "onEdit";
+    optionGrid.IdForm = idFormulario;
+
+}
+
+<script>
+    function onEdit(e) {
+        
+    }
+    function RevisarResultadoAjax(res) {
+        LoadingStop()
+        if (res.type !== "read") {
+            if (res.response.hasOwnProperty("Errors"))
+                if (res.response.Errors == null)
+                    MensajeUnico(3000, 'success', '@WebUiResourceForms.SolicitudExitosa', '@WebUiResourceForms.TituloInformacion')
+                else
+                    MensajeUnico(3000, 'error', '@WebUiResourceForms.SolicitudNoExitosa', '@WebUiResourceForms.TituloInformacion')
+        }
+    }
+</script>
+<script id="template-checkbox-agregador" type="text/x-kendo-template">
+    #if(Id !== null){#
+        <input id='#=Id# #=IdComercioProveedor# proveedor'
+            #if(NotificarEmailAgregador == true) {# checked #}#
+            class='k-checkbox'
+            type='checkbox'
+            onchange='setAgregador("#=IdComercioProveedor#", "#=NotificarEmailAgregador#", this.checked)'
+            />
+            <label for='#=Id# #=IdComercioProveedor# proveedor' class='k-checkbox-label'></label>
+    #}#
+</script>
+<script id="template-checkbox-recaudador" type="text/x-kendo-template">
+    #if(Id !== null){#
+        <input id='#=Id# #=IdComercioProveedor# recaudador'
+            #if(NotificarEmailRecaudador == true) {# checked #}#
+            class='k-checkbox'
+            type='checkbox'
+            onchange='setRecaudador("#=IdComercioProveedor#", "#=NotificarEmailAgregador#", this.checked)'
+            />
+            <label for='#=Id# #=IdComercioProveedor# recaudador' class='k-checkbox-label'></label>
+    #}#
+</script>
+<script id="template-checkbox-comercio" type="text/x-kendo-template">
+    #if(Id !== null){#
+        <input id='#=Id# #=IdComercioProveedor# comercio'
+            #if(NotificarEmailComercio == true) {# checked #}#
+            class='k-checkbox'
+            type='checkbox'
+            onchange='setComercio("#=IdComercioProveedor#", "#=NotificarEmailAgregador#", this.checked)'
+            />
+            <label for='#=Id# #=IdComercioProveedor# comercio' class='k-checkbox-label'></label>
+    #}#
+</script>
+<script>
+    var myTemplateAgregador = kendo.template($('#template-checkbox-agregador').html());
+    var myTemplateRecaudador = kendo.template($('#template-checkbox-recaudador').html());
+    var myTemplateComercio = kendo.template($('#template-checkbox-comercio').html());
+</script>
+<script>
+    function setAgregador(IdProv, OldCheck, checked) {
+        $.ajax({
+            url: '@Url.Action("SetAgregador", "NotificacionesEmail")',
+            type: 'POST',
+            dataType: 'json',
+            beforeSend: function () {
+                LoadingStart("Cargando...");
+            },
+            data: { IdProv, OldCheck, NewCheck: checked }
+        }).done(function () {
+            Mensaje(2000, "success", "Solicitud exitosa", "Confirmación");
+        }).fail(function (err) {
+            Mensaje(2000, "error", "Solicitud no realizada", "Confirmación");
+        }).always(function () {
+            LoadingStop();
+        });
+    }
+</script>
+<script>
+    function setRecaudador(IdProv, OldCheck, checked) {
+        $.ajax({
+            url: '@Url.Action("SetRecaudador", "NotificacionesEmail")',
+            type: 'POST',
+            dataType: 'json',
+            beforeSend: function () {
+                LoadingStart("Cargando...");
+            },
+            data: { IdProv, OldCheck, NewCheck: checked }
+        }).done(function () {
+            Mensaje(2000, "success", "Solicitud exitosa", "Confirmación");
+        }).fail(function (err) {
+            Mensaje(2000, "error", "Solicitud no realizada", "Confirmación");
+        }).always(function () {
+            LoadingStop();
+        });
+    }
+</script>
+<script>
+    function setComercio(IdProv, OldCheck, checked) {
+        $.ajax({
+            url: '@Url.Action("SetComercio", "NotificacionesEmail")',
+            type: 'POST',
+            dataType: 'json',
+            beforeSend: function () {
+                LoadingStart("Cargando...");
+            },
+            data: { IdProv, OldCheck, NewCheck: checked }
+        }).done(function () {
+            Mensaje(2000, "success", "Solicitud exitosa", "Confirmación");
+        }).fail(function (err) {
+            Mensaje(2000, "error", "Solicitud no realizada", "Confirmación");
+        }).always(function () {
+            LoadingStop();
+        });
+    }
+</script>
+
+@(Html.Kendo().Grid<comercios_proveedor_notificaciones_emailGrid_UI>()
+    .Name("grid")
+    .AutoBind(true)
+    .ToolBar(tool =>
+    {
+        tool.Create().Text("Añadir");
+        tool.Excel().Text("Exportar a Excel");
+        tool.Pdf().Text("Exportar a PDF");
+    })
+    .Excel(e => e.AllPages(true))
+        .Columns(columns =>
+        {
+            if (permission.accion_update == true || permission.accion_delete == true)
+            {
+                columns.Command(command =>
+                {
+                    if (permission.accion_delete == true)
+                    {
+                        command.Destroy().Text(" ");
+                    }
+                }).Width(100).HtmlAttributes(new
+                {
+                    @style = "text-align:center"
+                })
+                ;
+            }
+            columns.Bound(p => p.Id).Hidden();
+            columns.Bound(p => p.NombreComercio).Width("100").HtmlAttributes(new { style = "text-align:center;font-size:medium", @class = "text-center" });;
+            columns.Bound(p => p.NotificarEmailAgregador).ClientTemplate("#=myTemplateAgregador(data)#").Width("100").HtmlAttributes(new { style = "text-align:center;font-size:medium", @class = "text-center" });
+            columns.Bound(p => p.NotificarEmailRecaudador).ClientTemplate("#=myTemplateRecaudador(data)#").Width("100").HtmlAttributes(new { style = "text-align:center;font-size:medium", @class = "text-center" });
+            columns.Bound(p => p.NotificarEmailComercio).ClientTemplate("#=myTemplateComercio(data)#").Width("100").HtmlAttributes(new { style = "text-align:center;font-size:medium", @class = "text-center" });
+        })
+        .Selectable()
+        .Pageable(p =>
+        {
+            p.Messages(m => m
+            .Display("Mostrando {0} de {2} Registros")
+            .Empty("No")
+            .First("Ir a la primera página")
+            .Last("Ir a la última página")
+            .Next("Ir a la siguiente página")
+            .Previous("Ir a la página anterior")
+            .ItemsPerPage("Ítems por página"));
+            p.Refresh(true);
+            p.PageSizes(new int[] { 50, 100, 200, 500, 1000 });
+            p.ButtonCount(4);
+        })
+        .Filterable(filterable =>
+        {
+            filterable.Messages(m => m
+            .Filter("Filtrar")
+            .Clear("Limpiar")
+            .Info("Mostrar artículo(s) que:"));
+            filterable.Extra(false);
+            filterable.Enabled(true);
+            filterable.Operators(operators => operators
+            .ForString(str => str.Clear()
+            .Contains("Contiene")
+            .StartsWith("Comienza con")
+            .IsEqualTo("Es igual a")
+            .IsNotEqualTo("Es diferente a")
+            .EndsWith("Termina en")
+            ));
+        })
+        .Sortable()
+        .Scrollable(a => a.Virtual(true))
+        .Events(events =>
+        {
+        if (!string.IsNullOrEmpty(optionGrid.EventEdit))
+            events.Edit(optionGrid.EventEdit);
+        })
+        .DataSource(dataSource => dataSource
+        .Ajax()
+        .PageSize(20)
+        .ServerOperation(false)
+        .Events(events =>
+        {
+            events.Error("errorHandlerEndGridExtension");
+            events.RequestStart("onRequestStartGridExtension");
+            events.RequestEnd("onRequestEndGridExtension");
+        })
+        .Read(read => read.Action("Read", optionGrid.Controller))
+        .Create(create => create.Action("Create", optionGrid.Controller))
+        .Update(update => update.Action("Update", optionGrid.Controller))
+        .Destroy(destroy => destroy.Action("Delete", optionGrid.Controller))
+        .Model(m => m.Id(optionGrid.IdModel))
+        )
+        .Editable(e => e.Mode(GridEditMode.PopUp).TemplateName(optionGrid.TemplateName).AdditionalViewData(null)
+            .Window(w => w.Width(optionGrid.WidthPopUp).Title("Crear/Editar Comercio"))
+            .DisplayDeleteConfirmation(false))
+        .HtmlAttributes(new {
+            @style = "height: 100% !important;"
+        })
+        )

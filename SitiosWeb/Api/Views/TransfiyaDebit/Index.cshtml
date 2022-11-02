@@ -1,0 +1,46 @@
+﻿@using Visionamos.Coopcentral.DataAccess.Models.Ecgts
+@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Ecgts
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+
+<script>
+    function onEdit(e) {
+        
+    }
+    function checkNumber(e) {
+        if (/^[0-9]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+</script>
+
+@Html.LoadGridHelper()
+@(Html.NewGrid<clients_accounts_limit_low_amount_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "SRC";
+        options.Controller   = "TransfiyaDebit";
+        options.TemplateName = "TransfiyaDebit/EditorTemplateTransfiyaDebit";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = "Configuracion debito";
+        options.ViewDelete   = true;
+        options.ViewDetail   = false;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.SRC_TXT);
+        columns.Bound(p => p.MAX_OPE);
+        columns.Bound(p => p.MAX_VALUE).Format("{0:c2}");
+        columns.Bound(p => p.MAX_AMO).Format("{0:c2}");
+    })
+)

@@ -1,0 +1,187 @@
+﻿@using Visionamos.Operations.DataAccess.ViewModels.EnterpriseBackdrop.Transversal
+@using Visionamos.SitiosWeb.Recursos
+
+
+@{
+    Layout = null;
+}
+
+<style>
+    .container-fluid-title {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .titulo {
+        margin: 1rem;
+    }
+
+    .comboBox {
+        width: 20%;
+    }
+
+    .comboBoxPerfiles {
+        width: 20%;
+        margin-left: 1.5rem;
+    }
+</style>
+
+<script>
+    function onChange() {
+        var selected = $("#comboboxEntidad").data('kendoComboBox').value();
+
+        if (selected != "") {
+            var combo1 = $("#comboboxEntidad").data("kendoComboBox");
+            var combo2 = $("#comboBoxPerfiles").data("kendoComboBox");
+            combo1.enable(false);
+            combo2.enable(true);
+        } else if (selected == "") {
+            var combo2 = $("#comboBoxPerfiles").data("kendoComboBox");
+            combo2.enable(false);
+        }
+    }
+
+    function filtros() {
+        var entidad = $("#comboboxEntidad").val();
+        var perfil = $("#comboBoxPerfiles").val();
+
+        return {
+            entity: entidad,
+            profile: perfil
+        };
+    }
+
+    function filtrar() {
+        var selected = $("#comboBoxPerfiles").data('kendoComboBox').value();
+        if (selected != "") {
+            filtros();
+            $("#treelist").data("kendoTreeList").dataSource.read();
+        } else if (selected == "") {
+            var combo2 = $("#comboBoxPerfiles").data("kendoComboBox");
+            combo2.enable(false);
+            var combo1 = $("#comboboxEntidad").data("kendoComboBox");
+            combo1.enable(true);
+            $("#treelist").data("kendoTreeList").dataSource.read();
+        }
+        
+    }
+</script>
+
+<div class="container-fluid-title" style="overflow:auto;padding:1rem;">
+    <div class="titulo" style="margin-top:7px;">
+        <label>Entidad: </label>
+    </div>
+    <div class="comboBox">
+        @(Html.Kendo().ComboBoxFor(m => m)
+            .Name("comboboxEntidad")
+            .Filter("contains")
+            .DataTextField("NAME")
+            .DataValueField("CODE")
+            .Events(e => e.Change("onChange"))
+            .Placeholder(WebUiResourceForms.SelectEntity)
+            .ValuePrimitive(true)
+            .DataSource(source =>
+            {
+                source.Custom()
+                        .ServerFiltering(true)
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport =>
+                        {
+                            transport.Read("Read", "Commerce");
+                        })
+                        .Schema(schema =>
+                        {
+                            schema.Data("Data")
+                                .Total("Total");
+                        });
+            }).HtmlAttributes(new { @style = "width: 100%;" })
+        )
+    </div>
+    <div class="titulo" style="margin-top:7px;">
+        <label>Perfiles: </label>
+    </div>
+    <div class="comboBoxPerfiles">
+        @(Html.Kendo().ComboBoxFor(m => m)
+            .Name("comboBoxPerfiles")
+            .Filter("contains")
+            .DataTextField("ProfileName")
+            .DataValueField("Guid")
+            .Events(e => e.Change("filtrar"))
+            .Placeholder(WebUiResourceForms.SelectProfile)
+            .ValuePrimitive(true)
+            .DataSource(source =>
+            {
+                source.Custom()
+                        .ServerFiltering(true)
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport =>
+                        {
+                            transport.Read("ReadMenu", "PerfilesEntidad");
+                        })
+                        .Schema(schema =>
+                        {
+                            schema.Data("Data")
+                                .Total("Total");
+                        });
+            }).HtmlAttributes(new { @style = "width: 100%;" })
+        )
+    </div>
+</div>
+
+<script>
+    var combo2 = $("#comboBoxPerfiles").data("kendoComboBox");
+    combo2.enable(false);
+</script>
+
+<script id="template-checkbox" type="text/x-kendo-template">
+    #if(ViewCode !== null){#
+        <input id='#=Description#'
+            #if(IsActive == true) {# checked #}#
+            class='k-checkbox'
+            type='checkbox'
+            onchange='setView("#=ViewCode#", "#=IsActive#", this.checked)'
+            />
+            <label for='#=Description#' class='k-checkbox-label'></label>
+    #}#
+</script>
+
+<script>
+    function setView(ViewCode, IsActiveBefore, checked) {
+        var entity = $("#comboboxEntidad").val();
+        var profile = $("#comboBoxPerfiles").val();
+        $.ajax({
+            url: '@Url.Action("setView", "MenuEntidades")',
+            type: 'POST',
+            dataType: 'json',
+            beforeSend: function () {
+                LoadingStart("Cargando...");
+            },
+            data: { ViewCode, IsActiveBefore ,IsActive: checked, entity, profile }
+        }).done(function () {
+            Mensaje(2000, "success", "Solicitud exitosa", "Confirmación");
+        }).fail(function (err) {
+            Mensaje(2000, "error", "Solicitud no realizada", "Confirmación");
+        }).always(function () {
+            LoadingStop();
+        });
+    }
+</script>
+
+@(Html.Kendo().TreeList<MenuTransversal_UI>()
+        .Name("treelist")
+        .AutoBind(false)
+        .Columns(columns =>
+        {
+            columns.Add().Field(f => f.Description).Title("Menu").Width(450);
+            columns.Add().Field("Activar/Desactivar").Width(140).TemplateId("template-checkbox").Width(100).HtmlAttributes(new { style = "text-align:center", @class = "text-center" });
+        })
+        .DataSource(dataSource => dataSource
+            .Read(read => read.Action("Read", "MenuEntidades").Data("filtros"))
+            .AutoSync(true)
+            .Model(m =>
+            {
+                m.Id(f => f.Id);
+                m.ParentId(f => f.ParentId);
+                m.Field(f => f.Description);
+            })
+    ))

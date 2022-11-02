@@ -1,0 +1,89 @@
+﻿@using Visionamos.SitiosWeb.Recursos
+@using Visionamos.SitiosWeb.Extensiones
+@using Visionamos.Operations.DataAccess.ViewModels.EnterpriseSecurity
+@using Visionamos.Operations.DataAccess.Models.Integracion
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+}
+
+<script>
+    function checkInput(e) {
+        if (/^[0-9]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function onEdit(e) {
+        if (!e.model.isNew()) {
+            var entityCode = $("#EntityCode").data("kendoComboBox");
+            entityCode.enable(false);
+        }
+
+        var oldValue = "";
+        document.getElementById("NumberQuestion").addEventListener('change', function (e) {
+            var val = e.target.value;
+            if (val <= 0) {
+                e.target.value = oldValue;
+            }
+            else {
+                oldValue = val;
+            }
+        })        
+        document.getElementById("NumberAnswer").addEventListener('change', function (e) {
+            var val = e.target.value;
+            if (val <= 0) {
+                e.target.value = oldValue;
+            }
+            else {
+                oldValue = val;
+            }
+        })
+        document.getElementById("NumberAnswer").addEventListener('change', function (e) {
+            var val = $("#NumberAnswer").val();
+            var questions = $("#NumberQuestion").val();
+            if (val > questions) {
+                e.target.value = questions;
+                $("#NumberAnswer").val(e.target.value).change();
+            }
+            else {
+                oldValue = val;
+            }
+        })
+        document.getElementById("NumberQuestion").addEventListener('change', function (e) {
+            var val = $("#NumberQuestion").val();
+            var questions = $("#NumberAnswer").val();
+            if (val < questions) {
+                $("#NumberAnswer").val(val).change();
+            }
+            else {
+                oldValue = val;
+            }
+        })
+    }
+</script>
+
+@Html.LoadGridHelperInfo()
+@(Html.NewGridInfo<ReglaPreguntaEntidadGrid_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "Guid";
+        options.Controller   = "ReglaPreguntaEntidad";
+        options.TemplateName = "ReglaPreguntaEntidad/EditorTemplatesReglaPreguntaEntidad";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = WebUiResourceForms.TitleMaster;
+        options.ViewDelete   = true;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.Guid).Hidden();
+        columns.Bound(p => p.EntityName);
+        columns.Bound(p => p.NumberQuestion);
+        columns.Bound(p => p.NumberAnswer);
+    })
+)

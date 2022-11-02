@@ -1,0 +1,51 @@
+﻿@using Visionamos.Coopcentral.DataAccess.Models.Ecgts
+@using Visionamos.Coopcentral.DataAccess.Models.Integracion
+@using Visionamos.Coopcentral.DataAccess.ViewModels.Ecgts
+@using Visionamos.Coopcentral.SitiosWeb.Extensiones
+
+@{
+    Layout = null;
+    app_user app_user = Session["Usuario"] as app_user;
+    int idFormulario = Convert.ToInt32(Request.QueryString["idFormulario"]);
+
+}
+
+<script>
+    function onEdit(e) {
+    }
+    function checkInputMail(e) {
+        if (/^[0-9A-Za-z ñ Ñ . @@]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    function checkInput(e) {
+        if (/^[0-9A-Za-z ñ Ñ]+$/gi.test(e.key))
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+</script>
+
+@Html.LoadGridHelper()
+@(Html.NewGrid<gmf_category_UI>(
+    options =>
+    {
+        options.AppUser      = app_user;
+        options.IdModel      = "CODE";
+        options.Controller   = "GmfCategory";
+        options.TemplateName = "GmfCategory/EditorTemplateGmfCategory";
+        options.WidthPopUp   = 400;
+        options.TiTlePopUp   = "Configuracion categoria";
+        options.ViewDelete   = true;
+        options.ViewDetail   = false;
+        options.IdForm       = idFormulario;
+        options.EventEdit    = "onEdit";
+    },
+    columns => {
+        columns.Bound(p => p.CODE);
+        columns.Bound(p => p.NAME);
+        columns.Bound(p => p.EXEM_TOP).Format("{0:c2}");
+        columns.Bound(p => p.EXEM_PER_UI).Format("{0:p0}");
+    })
+)
